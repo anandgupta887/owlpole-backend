@@ -8,6 +8,7 @@ import connectDB from './config/database';
 import errorHandler from './middleware/errorHandler';
 import authRoutes from './routes/auth';
 import twinRoutes from './routes/twins';
+import paymentRoutes from './routes/payment';
 
 // Load env vars
 dotenv.config();
@@ -32,8 +33,8 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Static folder
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Static folder (uploads is in backend root, we're in backend/src)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Mount routes
 app.get('/', (req, res) => {
@@ -42,6 +43,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/twins', twinRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Error handler
 app.use(errorHandler);

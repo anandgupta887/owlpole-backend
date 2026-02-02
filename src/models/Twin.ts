@@ -9,6 +9,9 @@ export interface ITwin extends Document {
   avatarStatus: 'PENDING' | 'ACTIVE' | 'REJECTED';
   heygenAvatarId?: string;
   avatarImageUrl?: string;
+  sourceVideoPath?: string;
+  sourceAudioPath?: string;
+  sourceThumbnailPath?: string;
   fidelityScore: number;
   brainData?: any;
   createdAt: Date;
@@ -35,6 +38,9 @@ const TwinSchema = new Schema<ITwin>({
   },
   heygenAvatarId: String,
   avatarImageUrl: String,
+  sourceVideoPath: String,
+  sourceAudioPath: String,
+  sourceThumbnailPath: String,
   fidelityScore: {
     type: Number,
     default: 0

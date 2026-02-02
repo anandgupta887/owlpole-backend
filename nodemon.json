@@ -1,6 +1,6 @@
 {
-  "watch": ["*.ts", "config", "models", "controllers", "routes", "middleware", "services", "utils"],
+  "watch": ["src"],
   "ext": "ts",
   "ignore": ["dist"],
-  "exec": "ts-node server.ts"
+  "exec": "ts-node src/server.ts"
 }

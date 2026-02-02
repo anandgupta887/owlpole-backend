@@ -2,9 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
 
-// Extend Express Request to include user
+// Extend Express Request to include user and multer files
 export interface AuthRequest extends Request {
   user?: IUser;
+  file?: any;
+  files?: any;
 }
 
 // Protect routes
