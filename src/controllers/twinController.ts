@@ -12,11 +12,16 @@ import { createOnboardingOrder } from '../services/razorpayService';
 // @access  Private
 export const initiateOnboarding = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { answers } = req.body;
+    const { answers, planType = 'MONTHLY' } = req.body;
     const files = req.files as any;
 
     if (!answers) {
       res.status(400).json({ success: false, error: 'Neural answers are required' });
+      return;
+    }
+
+    if (!['MONTHLY', 'YEARLY', 'AFTERLIFE'].includes(planType)) {
+      res.status(400).json({ success: false, error: 'Invalid plan type selected' });
       return;
     }
 
@@ -25,7 +30,7 @@ export const initiateOnboarding = async (req: AuthRequest, res: Response, next: 
     const audioPath = files['audio'] ? files['audio'][0].path : undefined;
     const thumbPath = files['thumbnail'] ? files['thumbnail'][0].path : undefined;
 
-    // 2. Create Razorpay Order (Server-side - cannot be faked)
+    // 2. Create Razorpay Order
     let razorpayOrder;
     try {
       razorpayOrder = await createOnboardingOrder(req.user!._id.toString());
@@ -45,6 +50,7 @@ export const initiateOnboarding = async (req: AuthRequest, res: Response, next: 
     const session = await OnboardingSession.create({
       userId: req.user!._id,
       answers: parsedAnswers,
+      planType,
       sourceVideoPath: videoPath,
       sourceAudioPath: audioPath,
       sourceThumbnailPath: thumbPath,
@@ -56,7 +62,7 @@ export const initiateOnboarding = async (req: AuthRequest, res: Response, next: 
     await Billing.create({
       userId: req.user!._id,
       amount: razorpayOrder.amount / 100, // Razorpay amount is in cents
-      planType: 'YEARLY',
+      planType,
       status: 'PENDING',
       transactionType: 'PLAN_UPGRADE',
       razorpayOrderId: razorpayOrder.id

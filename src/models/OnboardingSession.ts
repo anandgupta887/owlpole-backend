@@ -9,6 +9,7 @@ export interface IOnboardingSession extends Document {
   sourceVideoPath?: string;
   sourceAudioPath?: string;
   sourceThumbnailPath?: string;
+  planType: 'MONTHLY' | 'YEARLY' | 'AFTERLIFE';
   razorpayOrderId: string;
   razorpayPaymentId?: string;
   status: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED';
@@ -29,6 +30,11 @@ const OnboardingSessionSchema = new Schema<IOnboardingSession>({
   sourceVideoPath: String,
   sourceAudioPath: String,
   sourceThumbnailPath: String,
+  planType: {
+    type: String,
+    enum: ['MONTHLY', 'YEARLY', 'AFTERLIFE'],
+    required: true
+  },
   razorpayOrderId: {
     type: String,
     required: true,

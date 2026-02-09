@@ -8,22 +8,15 @@ import jwt from 'jsonwebtoken';
  * ROLE-SPECIFIC FIELD USAGE:
  * 
  * CREATOR (builds digital twins):
- *   - plan: Subscription tier (FREE/YEARLY/AFTERLIFE) - to host avatar
- *   - planExpiresAt: Subscription expiry date
- *   - avatarStatus: Status of their digital avatar
- *   - heygenAvatarId: HeyGen video avatar ID
- *   - memoryEnabled: Can their twin remember conversations
+ *   - onboardingStatus: Progress in onboarding ('INITIAL' -> 'COMPLETED')
  *   - credits: To test/talk to their own twin (same as callers)
- *   - paymentStatus: Whether they've paid for their plan
+ *   - paymentStatus: Whether they've paid for their initial plan
  *   - razorpayId: Payment customer ID
  * 
  * CALLER (buys credits to call twins):
  *   - credits: Available calling credits (pay-per-use)
  *   - paymentStatus: Whether they've ever purchased credits
  *   - razorpayId: Payment customer ID
- *   - plan: NOT USED (callers don't have subscriptions)
- *   - avatarStatus: NOT USED (callers don't create avatars)
- *   - memoryEnabled: NOT USED
  * 
  * ADMIN (platform managers):
  *   - All restrictions bypassed, premium fields ignored
@@ -36,19 +29,11 @@ export interface IUser extends Document {
   uid: string; // The OWL-XXXXXX identifier
   
   // Credits (used by both CREATORS and CALLERS)
-  // - CREATORS: To test/talk to their own twin
-  // - CALLERS: To call any twin (pay-per-use)
   credits: number;
   
-  onboardingComplete: boolean;
+  // User lifecycle state
+  onboardingStatus: 'INITIAL' | 'FORM_FILLED' | 'PAYMENT_PENDING' | 'COMPLETED';
   paymentStatus?: 'UNPAID' | 'PAID';
-  
-  // CREATOR-ONLY FIELDS
-  avatarStatus?: 'PENDING' | 'ACTIVE' | 'REJECTED';  // Creator's avatar status
-  memoryEnabled?: boolean;                            // Creator's twin memory feature
-  heygenAvatarId?: string;                          // Creator's HeyGen avatar ID
-  plan?: 'FREE' | 'YEARLY' | 'AFTERLIFE';           // Creator's subscription (NOT for callers)
-  planExpiresAt?: Date;                              // Creator's plan expiry (NOT for callers)
   
   // Payment integration (CREATOR & CALLER)
   razorpayId?: string;
@@ -100,29 +85,16 @@ const UserSchema = new Schema<IUser>({
     type: Number,
     default: 0
   },
-  onboardingComplete: {
-    type: Boolean,
-    default: false
+  onboardingStatus: {
+    type: String,
+    enum: ['INITIAL', 'FORM_FILLED', 'PAYMENT_PENDING', 'COMPLETED'],
+    default: 'INITIAL'
   },
   paymentStatus: {
     type: String,
     enum: ['UNPAID', 'PAID']
   },
-  avatarStatus: {
-    type: String,
-    enum: ['PENDING', 'ACTIVE', 'REJECTED']
-  },
-  memoryEnabled: {
-    type: Boolean,
-    default: false
-  },
-  heygenAvatarId: String,
   razorpayId: String,
-  plan: {
-    type: String,
-    enum: ['FREE', 'YEARLY', 'AFTERLIFE']
-  },
-  planExpiresAt: Date,
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   createdAt: {
@@ -138,33 +110,19 @@ const UserSchema = new Schema<IUser>({
 // Set role-specific defaults before saving
 UserSchema.pre('save', function() {
   if (this.isNew) {
-    // Generate the unique OWL-ID (Matches legacy logic)
+    // Generate the unique OWL-ID
     if (!this.uid) {
       this.uid = `OWL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     }
 
     if (this.role === 'CALLER') {
-      // Callers get free welcome credits (pay-per-use model)
-      this.credits = this.credits || 60;
-      this.onboardingComplete = true; // Callers skip onboarding
-      
-      // Remove creator-only fields from the database document
-      this.plan = undefined;
-      this.planExpiresAt = undefined;
-      this.avatarStatus = undefined;
-      this.memoryEnabled = undefined;
-      // paymentStatus can remain if we use it for credit purchase status, 
-      // but if you want it gone for callers too:
+      this.credits = this.credits || 0;
+      this.onboardingStatus = 'COMPLETED'; // Callers skip onboarding
       this.paymentStatus = undefined;
     } else if (this.role === 'CREATOR') {
-      // Creators get BOTH plan AND credits
-      this.credits = this.credits || 60;
-      this.plan = this.plan || 'FREE';
-      this.planExpiresAt = this.planExpiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      this.avatarStatus = this.avatarStatus || 'PENDING';
-      this.memoryEnabled = this.memoryEnabled || false;
+      this.credits = this.credits || 0;
       this.paymentStatus = this.paymentStatus || 'UNPAID';
-      this.onboardingComplete = this.onboardingComplete || false;
+      this.onboardingStatus = this.onboardingStatus || 'INITIAL';
     }
   }
 });

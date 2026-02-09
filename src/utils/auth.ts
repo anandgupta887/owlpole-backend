@@ -17,13 +17,8 @@ export const sendTokenResponse = (user: IUser, statusCode: number, res: Response
       email: user.email,
       role: user.role,
       credits: user.credits,
-      onboardingComplete: user.onboardingComplete,
-      paymentStatus: user.paymentStatus,
-      avatarStatus: user.avatarStatus,
-      memoryEnabled: user.memoryEnabled,
-      heygenAvatarId: user.heygenAvatarId,
-      plan: user.plan,
-      planExpiresAt: user.planExpiresAt
+      onboardingStatus: user.onboardingStatus,
+      paymentStatus: user.paymentStatus
     }
   });
 };

@@ -4,7 +4,7 @@ export interface IBilling extends Document {
   userId: mongoose.Types.ObjectId;
   amount: number;
   credits?: number;
-  planType?: 'FREE' | 'YEARLY' | 'AFTERLIFE';
+  planType?: 'MONTHLY' | 'YEARLY' | 'AFTERLIFE';
   status: 'PENDING' | 'COMPLETED' | 'FAILED';
   transactionType: 'PURCHASE' | 'USAGE' | 'REFUND' | 'PLAN_UPGRADE';
   razorpayOrderId?: string;
@@ -26,7 +26,7 @@ const BillingSchema = new Schema<IBilling>({
   credits: Number,
   planType: {
     type: String,
-    enum: ['FREE', 'YEARLY', 'AFTERLIFE']
+    enum: ['MONTHLY', 'YEARLY', 'AFTERLIFE']
   },
   status: {
     type: String,

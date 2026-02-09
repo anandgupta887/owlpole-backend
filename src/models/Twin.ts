@@ -13,6 +13,9 @@ export interface ITwin extends Document {
   sourceAudioPath?: string;
   sourceThumbnailPath?: string;
   fidelityScore: number;
+  memoryEnabled: boolean;
+  plan: 'MONTHLY' | 'YEARLY' | 'AFTERLIFE';
+  planExpiresAt?: Date;
   brainData?: any;
   createdAt: Date;
   updatedAt: Date;
@@ -45,6 +48,16 @@ const TwinSchema = new Schema<ITwin>({
     type: Number,
     default: 0
   },
+  memoryEnabled: {
+    type: Boolean,
+    default: false
+  },
+  plan: {
+    type: String,
+    enum: ['MONTHLY', 'YEARLY', 'AFTERLIFE'],
+    default: 'MONTHLY'
+  },
+  planExpiresAt: Date,
   brainData: Schema.Types.Mixed,
   createdAt: {
     type: Date,

@@ -82,14 +82,24 @@ export const handlePaymentWebhook = async (req: Request, res: Response, next: Ne
           billingRecord.razorpayPaymentId = paymentId;
           await billingRecord.save();
 
+          // Calculate plan expiry
+          const now = new Date();
+          let planExpiresAt: Date;
+          if (session.planType === 'MONTHLY') {
+            planExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+          } else if (session.planType === 'YEARLY') {
+            planExpiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+          } else {
+            // AFTERLIFE - set to 100 years in future
+            planExpiresAt = new Date(now.getFullYear() + 100, now.getMonth(), now.getDate());
+          }
+
           // Create the Twin (Brain synthesis here)
           const brainData = {
             name: session.answers.name || 'Neural Candidate',
-            occupation: 'Digital Intelligence',
-            personality: 'Analytical and adaptive.',
-            voiceDescription: 'Clear and resonant.',
-            traits: ['Innovative', 'Resilient'],
-            communicationStyle: 'Direct and professional'
+            occupation: session.answers.occupation || 'Digital Intelligence',
+            personality: session.answers.personality || 'Analytical and adaptive.',
+            voiceDescription: session.answers.voiceDescription || 'Clear and resonant.',
           };
 
           const twin = await Twin.create({
@@ -99,19 +109,19 @@ export const handlePaymentWebhook = async (req: Request, res: Response, next: Ne
             personality: brainData.personality,
             voiceDescription: brainData.voiceDescription,
             avatarStatus: 'PENDING',
+            plan: session.planType,
+            planExpiresAt,
             sourceVideoPath: session.sourceVideoPath,
             sourceAudioPath: session.sourceAudioPath,
             sourceThumbnailPath: session.sourceThumbnailPath,
             fidelityScore: 98.4,
-            brainData: brainData
+            brainData: session.answers // Use full answers as brain data
           });
 
           // Update User Status
           await User.findByIdAndUpdate(session.userId, {
             paymentStatus: 'PAID',
-            plan: 'YEARLY',
-            onboardingComplete: true,
-            avatarStatus: 'PENDING',
+            onboardingStatus: 'COMPLETED',
             razorpayId: paymentId
           });
 

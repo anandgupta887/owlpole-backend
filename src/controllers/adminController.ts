@@ -16,9 +16,8 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
     const totalCreators = await User.countDocuments({ role: 'CREATOR' });
     const totalCallers = await User.countDocuments({ role: 'CALLER' });
 
-    // Count active creators (those with ACTIVE avatar status)
-    const activeCreators = await User.countDocuments({ 
-      role: 'CREATOR', 
+    // Count active creators (those with an ACTIVE twin)
+    const activeCreators = await Twin.countDocuments({ 
       avatarStatus: 'ACTIVE' 
     });
 
@@ -101,13 +100,8 @@ export const getUsers = async (req: AuthRequest, res: Response): Promise<void> =
       email: user.email,
       role: user.role,
       credits: user.credits,
-      onboardingComplete: user.onboardingComplete,
+      onboardingStatus: user.onboardingStatus,
       paymentStatus: user.paymentStatus,
-      avatarStatus: user.avatarStatus,
-      plan: user.plan,
-      planExpiresAt: user.planExpiresAt ? user.planExpiresAt.getTime() : undefined,
-      heygenAvatarId: user.heygenAvatarId,
-      memoryEnabled: user.memoryEnabled,
       createdAt: user.createdAt.getTime()
     }));
 
@@ -344,13 +338,8 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
       email: user.email,
       role: user.role,
       credits: user.credits,
-      onboardingComplete: user.onboardingComplete,
+      onboardingStatus: user.onboardingStatus,
       paymentStatus: user.paymentStatus,
-      avatarStatus: user.avatarStatus,
-      plan: user.plan,
-      planExpiresAt: user.planExpiresAt ? user.planExpiresAt.getTime() : undefined,
-      heygenAvatarId: user.heygenAvatarId,
-      memoryEnabled: user.memoryEnabled,
       createdAt: user.createdAt.getTime()
     };
 
@@ -367,6 +356,9 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
         voiceDescription: twin.voiceDescription,
         avatarStatus: twin.avatarStatus,
         heygenAvatarId: twin.heygenAvatarId,
+        memoryEnabled: twin.memoryEnabled,
+        plan: twin.plan,
+        planExpiresAt: twin.planExpiresAt ? twin.planExpiresAt.getTime() : undefined,
         fidelityScore: twin.fidelityScore,
         createdAt: twin.createdAt.getTime()
       }));
