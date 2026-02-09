@@ -9,6 +9,7 @@ import errorHandler from './middleware/errorHandler';
 import authRoutes from './routes/auth';
 import twinRoutes from './routes/twins';
 import paymentRoutes from './routes/payment';
+import adminRoutes from './routes/admin';
 
 // Load env vars
 dotenv.config();
@@ -44,6 +45,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/twins', twinRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handler
 app.use(errorHandler);
