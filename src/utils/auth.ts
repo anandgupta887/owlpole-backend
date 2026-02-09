@@ -17,8 +17,7 @@ export const sendTokenResponse = (user: IUser, statusCode: number, res: Response
       email: user.email,
       role: user.role,
       credits: user.credits,
-      onboardingStatus: user.onboardingStatus,
-      paymentStatus: user.paymentStatus
+      onboardingStatus: user.onboardingStatus
     }
   });
 };

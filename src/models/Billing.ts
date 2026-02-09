@@ -6,7 +6,7 @@ export interface IBilling extends Document {
   credits?: number;
   planType?: 'MONTHLY' | 'YEARLY' | 'AFTERLIFE';
   status: 'PENDING' | 'COMPLETED' | 'FAILED';
-  transactionType: 'PURCHASE' | 'USAGE' | 'REFUND' | 'PLAN_UPGRADE';
+  transactionType: 'PURCHASE' | 'USAGE' | 'REFUND';
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   razorpaySignature?: string;
@@ -35,7 +35,7 @@ const BillingSchema = new Schema<IBilling>({
   },
   transactionType: {
     type: String,
-    enum: ['PURCHASE', 'USAGE', 'REFUND', 'PLAN_UPGRADE'],
+    enum: ['PURCHASE', 'USAGE', 'REFUND'],
     required: true
   },
   razorpayOrderId: String,

@@ -82,12 +82,43 @@ export const getUsers = async (req: AuthRequest, res: Response): Promise<void> =
     const limitNum = parseInt(limit as string, 10);
     const offsetNum = parseInt(offset as string, 10);
 
-    // Fetch users with pagination
-    const users = await User.find(filter)
-      .select('-password -resetPasswordToken -resetPasswordExpire')
-      .limit(limitNum)
-      .skip(offsetNum)
-      .sort({ createdAt: -1 });
+    // Use aggregation to join with twins and get the avatar status
+    const pipeline: any[] = [
+      { $match: filter },
+      { $sort: { createdAt: -1 } },
+      { $skip: offsetNum },
+      { $limit: limitNum },
+      {
+        $lookup: {
+          from: 'twins',
+          localField: '_id',
+          foreignField: 'creatorUid',
+          as: 'userTwins'
+        }
+      },
+      {
+        $addFields: {
+          avatarStatus: {
+            $let: {
+              vars: {
+                firstTwin: { $arrayElemAt: ['$userTwins', 0] }
+              },
+              in: { $ifNull: ['$$firstTwin.avatarStatus', 'PENDING'] }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          password: 0,
+          resetPasswordToken: 0,
+          resetPasswordExpire: 0,
+          userTwins: 0
+        }
+      }
+    ];
+
+    const users = await User.aggregate(pipeline);
 
     // Get total count for pagination
     const total = await User.countDocuments(filter);
@@ -101,8 +132,8 @@ export const getUsers = async (req: AuthRequest, res: Response): Promise<void> =
       role: user.role,
       credits: user.credits,
       onboardingStatus: user.onboardingStatus,
-      paymentStatus: user.paymentStatus,
-      createdAt: user.createdAt.getTime()
+      avatarStatus: user.avatarStatus,
+      createdAt: user.createdAt instanceof Date ? user.createdAt.getTime() : new Date(user.createdAt).getTime()
     }));
 
     res.status(200).json({
@@ -144,7 +175,7 @@ export const getPayments = async (req: AuthRequest, res: Response): Promise<void
     if (status && ['COMPLETED', 'PENDING', 'FAILED'].includes(status as string)) {
       matchStage.status = status;
     }
-    if (type && ['PURCHASE', 'USAGE', 'REFUND', 'PLAN_UPGRADE'].includes(type as string)) {
+    if (type && ['PURCHASE', 'USAGE', 'REFUND'].includes(type as string)) {
       matchStage.transactionType = type;
     }
     // Only add match stage if there are filters
@@ -339,7 +370,6 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
       role: user.role,
       credits: user.credits,
       onboardingStatus: user.onboardingStatus,
-      paymentStatus: user.paymentStatus,
       createdAt: user.createdAt.getTime()
     };
 
@@ -349,6 +379,7 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
       const userTwins = await Twin.find({ creatorUid: user._id });
       twins = userTwins.map(twin => ({
         id: twin._id.toString(),
+        uid: twin.uid,
         creatorUid: user.uid,
         name: twin.name,
         occupation: twin.occupation,
@@ -359,6 +390,7 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
         memoryEnabled: twin.memoryEnabled,
         plan: twin.plan,
         planExpiresAt: twin.planExpiresAt ? twin.planExpiresAt.getTime() : undefined,
+        activatedAt: twin.activatedAt ? twin.activatedAt.getTime() : undefined,
         fidelityScore: twin.fidelityScore,
         createdAt: twin.createdAt.getTime()
       }));
@@ -450,6 +482,60 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user details',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Activate a creator's twin and grant bonus credits
+ * @route   POST /api/admin/twins/:twinId/activate
+ * @access  Admin
+ */
+export const activateTwin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { twinId } = req.params;
+    const { heygenAvatarId } = req.body;
+
+    if (!heygenAvatarId) {
+      res.status(400).json({ success: false, message: 'HeyGen Avatar ID is required for activation' });
+      return;
+    }
+
+    // 1. Find and update the twin
+    const twin = await Twin.findById(twinId);
+    if (!twin) {
+      res.status(404).json({ success: false, message: 'Twin not found' });
+      return;
+    }
+
+    twin.heygenAvatarId = heygenAvatarId;
+    twin.avatarStatus = 'ACTIVE';
+    await twin.save();
+
+    // 2. Find the creator and grant 60 credits
+    const user = await User.findById(twin.creatorUid);
+    if (user) {
+      user.credits = (user.credits || 0) + 60;
+      await user.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        twin: {
+          id: twin._id,
+          avatarStatus: twin.avatarStatus,
+          heygenAvatarId: twin.heygenAvatarId
+        },
+        newCredits: user ? user.credits : 0
+      }
+    });
+  } catch (error: any) {
+    console.error('Error activating twin:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to activate twin',
       error: error.message
     });
   }

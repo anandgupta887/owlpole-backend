@@ -10,6 +10,8 @@ const getRazorpayInstance = (): Razorpay => {
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
+    console.log('Initializing Razorpay with Key ID:', keyId ? `${keyId.substring(0, 8)}...` : 'MISSING');
+
     if (!keyId || !keySecret) {
       throw new Error('Razorpay credentials not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env');
     }
@@ -25,7 +27,7 @@ const getRazorpayInstance = (): Razorpay => {
 /**
  * Create a Razorpay Order for onboarding payment
  */
-export const createOnboardingOrder = async (userId: string): Promise<any> => {
+export const createOnboardingOrder = async (userId: string, planType: string = 'MONTHLY'): Promise<any> => {
   try {
     const razorpayInstance = getRazorpayInstance();
     
@@ -34,13 +36,22 @@ export const createOnboardingOrder = async (userId: string): Promise<any> => {
     const timestamp = Date.now().toString().substring(3); // Remove first 3 digits
     const receipt = `onboard_${shortUserId}_${timestamp}`;
     
+    const amount = planType === 'YEARLY' ? 79200 : 6900;
+
+    console.log('Attempting order creation with:', {
+      amount,
+      currency: 'USD',
+      receipt: receipt
+    });
+
     const order = await razorpayInstance.orders.create({
-      amount: 6900, // $69.00 in cents
+      amount: amount, 
       currency: 'USD',
       receipt: receipt,
       notes: {
         purpose: 'Creator Onboarding',
-        userId: userId
+        userId: userId,
+        planType
       }
     });
 

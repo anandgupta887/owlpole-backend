@@ -33,7 +33,6 @@ export interface IUser extends Document {
   
   // User lifecycle state
   onboardingStatus: 'INITIAL' | 'FORM_FILLED' | 'PAYMENT_PENDING' | 'COMPLETED';
-  paymentStatus?: 'UNPAID' | 'PAID';
   
   // Payment integration (CREATOR & CALLER)
   razorpayId?: string;
@@ -90,10 +89,6 @@ const UserSchema = new Schema<IUser>({
     enum: ['INITIAL', 'FORM_FILLED', 'PAYMENT_PENDING', 'COMPLETED'],
     default: 'INITIAL'
   },
-  paymentStatus: {
-    type: String,
-    enum: ['UNPAID', 'PAID']
-  },
   razorpayId: String,
   resetPasswordToken: String,
   resetPasswordExpire: Date,
@@ -118,10 +113,8 @@ UserSchema.pre('save', function() {
     if (this.role === 'CALLER') {
       this.credits = this.credits || 0;
       this.onboardingStatus = 'COMPLETED'; // Callers skip onboarding
-      this.paymentStatus = undefined;
     } else if (this.role === 'CREATOR') {
       this.credits = this.credits || 0;
-      this.paymentStatus = this.paymentStatus || 'UNPAID';
       this.onboardingStatus = this.onboardingStatus || 'INITIAL';
     }
   }

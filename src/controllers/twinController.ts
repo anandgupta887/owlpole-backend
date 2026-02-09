@@ -33,7 +33,7 @@ export const initiateOnboarding = async (req: AuthRequest, res: Response, next: 
     // 2. Create Razorpay Order
     let razorpayOrder;
     try {
-      razorpayOrder = await createOnboardingOrder(req.user!._id.toString());
+      razorpayOrder = await createOnboardingOrder(req.user!._id.toString(), planType);
     } catch (error) {
       res.status(500).json({ success: false, error: 'Payment system unavailable. Please try again.' });
       return;
@@ -64,7 +64,7 @@ export const initiateOnboarding = async (req: AuthRequest, res: Response, next: 
       amount: razorpayOrder.amount / 100, // Razorpay amount is in cents
       planType,
       status: 'PENDING',
-      transactionType: 'PLAN_UPGRADE',
+      transactionType: 'PURCHASE',
       razorpayOrderId: razorpayOrder.id
     });
 

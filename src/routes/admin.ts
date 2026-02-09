@@ -1,5 +1,5 @@
 import express from 'express';
-import { getStats, getUsers, getPayments, getCalls, getUserDetails } from '../controllers/adminController';
+import { getStats, getUsers, getPayments, getCalls, getUserDetails, activateTwin } from '../controllers/adminController';
 import { verifyAdmin } from '../middleware/adminAuth';
 
 const router = express.Router();
@@ -32,5 +32,10 @@ router.get('/calls', verifyAdmin, getCalls);
 // @desc    Get complete user details with twins, calls, and payments
 // @access  Admin
 router.get('/users/:userId', verifyAdmin, getUserDetails);
+
+// @route   POST /api/admin/twins/:twinId/activate
+// @desc    Activate a creator's twin and grant bonus credits
+// @access  Admin
+router.post('/twins/:twinId/activate', verifyAdmin, activateTwin);
 
 export default router;

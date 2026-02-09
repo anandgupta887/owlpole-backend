@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ITwin extends Document {
   creatorUid: mongoose.Types.ObjectId;
+  uid: string; // The OWL-XXXXXX identifier from creator
   name: string;
   occupation?: string;
   personality?: string;
@@ -16,6 +17,8 @@ export interface ITwin extends Document {
   memoryEnabled: boolean;
   plan: 'MONTHLY' | 'YEARLY' | 'AFTERLIFE';
   planExpiresAt?: Date;
+  activatedAt?: Date;
+  paymentStatus: 'UNPAID' | 'PAID';
   brainData?: any;
   createdAt: Date;
   updatedAt: Date;
@@ -26,6 +29,11 @@ const TwinSchema = new Schema<ITwin>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  uid: {
+    type: String,
+    unique: true,
+    sparse: true // Allow null during creation, will be set in pre-save
   },
   name: {
     type: String,
@@ -58,6 +66,12 @@ const TwinSchema = new Schema<ITwin>({
     default: 'MONTHLY'
   },
   planExpiresAt: Date,
+  activatedAt: Date,
+  paymentStatus: {
+    type: String,
+    enum: ['UNPAID', 'PAID'],
+    default: 'PAID' // Assuming if it's created, it's paid in the current flow
+  },
   brainData: Schema.Types.Mixed,
   createdAt: {
     type: Date,
@@ -69,8 +83,19 @@ const TwinSchema = new Schema<ITwin>({
   }
 });
 
-TwinSchema.pre('save', function() {
+// Generate unique OWL-XXXXXX ID and track activation
+TwinSchema.pre('save', async function() {
   this.updatedAt = new Date();
+  
+  // Generate uid if not already set
+  if (!this.uid) {
+    this.uid = `OWL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  }
+  
+  // Set activatedAt timestamp when status changes to ACTIVE
+  if (this.isModified('avatarStatus') && this.avatarStatus === 'ACTIVE' && !this.activatedAt) {
+    this.activatedAt = new Date();
+  }
 });
 
 export default mongoose.model<ITwin>('Twin', TwinSchema);

@@ -54,30 +54,15 @@ export const handlePaymentWebhook = async (req: Request, res: Response, next: Ne
 
       // 3. Process according to transaction type
       if (billingRecord.transactionType === 'PURCHASE') {
-        // Handle Credit Purchase
-        console.log('✓ Processing credit purchase...');
-        
-        billingRecord.status = 'COMPLETED';
-        billingRecord.razorpayPaymentId = paymentId;
-        await billingRecord.save();
-
-        const user = await User.findById(billingRecord.userId);
-        if (user) {
-          user.credits = (user.credits || 0) + (billingRecord.credits || 0);
-          await user.save();
-          console.log(`✅ Added ${billingRecord.credits} credits to user ${user.uid}`);
-        }
-      } else if (billingRecord.transactionType === 'PLAN_UPGRADE') {
-        // Handle Onboarding Payment
-        console.log('✓ Processing onboarding payment (Twin Synthesis)...');
-
         const session = await OnboardingSession.findOne({ 
           razorpayOrderId: orderId,
           status: 'PENDING'
         });
 
         if (session) {
-          // Update billing record
+          // A. Handle Onboarding Payment (Twin Synthesis)
+          console.log('✓ Processing onboarding purchase (Twin Synthesis)...');
+          
           billingRecord.status = 'COMPLETED';
           billingRecord.razorpayPaymentId = paymentId;
           await billingRecord.save();
@@ -94,20 +79,13 @@ export const handlePaymentWebhook = async (req: Request, res: Response, next: Ne
             planExpiresAt = new Date(now.getFullYear() + 100, now.getMonth(), now.getDate());
           }
 
-          // Create the Twin (Brain synthesis here)
-          const brainData = {
-            name: session.answers.name || 'Neural Candidate',
-            occupation: session.answers.occupation || 'Digital Intelligence',
-            personality: session.answers.personality || 'Analytical and adaptive.',
-            voiceDescription: session.answers.voiceDescription || 'Clear and resonant.',
-          };
-
+          // Create the Twin
           const twin = await Twin.create({
             creatorUid: session.userId,
-            name: brainData.name,
-            occupation: brainData.occupation,
-            personality: brainData.personality,
-            voiceDescription: brainData.voiceDescription,
+            name: session.answers.name || 'Neural Identity',
+            occupation: session.answers.occupation,
+            personality: session.answers.personality,
+            voiceDescription: session.answers.voiceDescription,
             avatarStatus: 'PENDING',
             plan: session.planType,
             planExpiresAt,
@@ -115,12 +93,12 @@ export const handlePaymentWebhook = async (req: Request, res: Response, next: Ne
             sourceAudioPath: session.sourceAudioPath,
             sourceThumbnailPath: session.sourceThumbnailPath,
             fidelityScore: 98.4,
-            brainData: session.answers // Use full answers as brain data
+            brainData: session.answers,
+            paymentStatus: 'PAID'
           });
 
           // Update User Status
           await User.findByIdAndUpdate(session.userId, {
-            paymentStatus: 'PAID',
             onboardingStatus: 'COMPLETED',
             razorpayId: paymentId
           });
@@ -130,14 +108,22 @@ export const handlePaymentWebhook = async (req: Request, res: Response, next: Ne
           session.razorpayPaymentId = paymentId;
           await session.save();
 
-          console.log('✅ Onboarding completed for user:', session.userId);
+          console.log('✅ Onboarding purchase completed for user:', session.userId);
           console.log('✅ Twin created:', twin._id);
         } else {
-          console.warn('⚠️ No onboarding session found for order:', orderId);
-          // Still complete the billing record at least
+          // B. Handle Credit Purchase (Regular)
+          console.log('✓ Processing credit purchase...');
+          
           billingRecord.status = 'COMPLETED';
           billingRecord.razorpayPaymentId = paymentId;
           await billingRecord.save();
+
+          const user = await User.findById(billingRecord.userId);
+          if (user) {
+            user.credits = (user.credits || 0) + (billingRecord.credits || 0);
+            await user.save();
+            console.log(`✅ Added ${billingRecord.credits} credits to user ${user.uid}`);
+          }
         }
       }
 
