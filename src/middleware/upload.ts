@@ -9,16 +9,21 @@ import fs from 'fs';
 const uploadDir = path.join(__dirname, '..', 'uploads');
 const sectors = ['videos', 'audio', 'thumbnails'];
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
-sectors.forEach(sector => {
-  const dir = path.join(uploadDir, sector);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir);
+// Try to create directories (works locally, fails gracefully on Vercel)
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
   }
-});
+
+  sectors.forEach(sector => {
+    const dir = path.join(uploadDir, sector);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+} catch (error) {
+  console.warn('Warning: Could not create upload directories (read-only filesystem)');
+}
 
 // Configure storage
 const storage = multer.diskStorage({
